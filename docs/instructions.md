@@ -17,7 +17,7 @@ Mojo is pinned to 1.1.0. The Modular channel may require `PREFIX_API_KEY` in a l
 
 ## Encode and decode
 
-A struct needs `Defaultable` so `decode` can build it, and `Movable` so the value can be returned. Declare the fields in the order they should appear on the wire.
+A struct needs `Defaultable` so `decode` can build it, and `Movable` so the value can be returned. Declare the fields in the order they should appear on the wire. Kiln writes those values and leaves the names in the source, so two `Int32` fields occupy eight bytes.
 
 ```mojo
 from std.collections import Span
