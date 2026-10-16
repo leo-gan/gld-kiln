@@ -28,14 +28,22 @@ Sources: `experiments/harness.mojo`, `experiments/variants.mojo`, and `experimen
 | E19 | Delta coding for integer lists? | Not adopted. E07's bulk copy is a single memory move. Delta coding replaces that with arithmetic. | Bulk copy stays. |
 | E20 | Pad small messages to 64 bytes? | Not adopted. The measured message is 44 bytes. Padding would make it larger than the leaders without removing a store. | No padding on Frozen. The tensor header is 64 bytes so the payload is aligned. |
 | E21 | One reserve for a leaf struct, then pointer stores? | One message: encode mean 15 ns, decode mean 36 ns, about 51 ns together. Batch of 100 as one list field: encode mean 345 ns, decode mean 1.80 µs without UTF-8 and 3.09 µs with UTF-8. Together with UTF-8 that is about 3.4 µs. `copy_bytes` of the 4404-byte batch mean 129 ns. | Adopted when every field is a scalar or a string, up to 16 fields. Other structs keep a checked store per field. |
+| E22 | Unaligned `Pointer.unsafe_store` / `unsafe_load` for 2-, 4-, and 8-byte values? | The pointer manual documents `alignment=1` for data that is not naturally aligned. On this little-endian host a paired `decode_small.mojo` run moved batch encode from mean 443 ns to mean 339 ns, and owned decode of that batch with UTF-8 from mean 3.32 µs to mean 1.56 µs (the decode move is mostly E23 and E24). Byte stores remain in the source for a big-endian target. | Adopted when `is_little_endian()` is true. |
+| E23 | `String(unsafe_uninit_length=)` plus `memcpy` instead of slicing into `String(unsafe_from_utf8=)`? | Two hundred escaped 5-byte strings: span constructor mean 6605 ns, uninitialized fill mean 1122 ns (`experiments/mojo_speed.mojo`). `read_string` now copies from the cursor pointer and does not build a span first. | Adopted. |
+| E24 | ASCII OR-scan before the UTF-8 state machine? | After E23, checked and unchecked owned decode of 100 separate messages were mean 1945 ns and 1816 ns. With the OR-scan, the same file's checked batch decode is mean 1.56 µs and the unchecked batch decode is mean 1.43 µs. A later 8-byte `unsafe_load` of that OR, which is the same unaligned load as E22, cut 2000 scans of a 200-byte ASCII buffer from mean 83 µs to mean 12 µs (`experiments/utf8_words.mojo`). Five-byte scans went from mean 5.5 µs to mean 2.5 µs over the same 2000 calls. | Adopted. A high bit falls through to the existing checker. |
+| E25 | `algorithm.vectorize` on the message? | The algorithm package says to use it for large arrays, and that a normal loop is the simpler choice for short data. The measured strings are 5 bytes. A 32-byte SIMD UTF-8 chunk does not apply. | Not used on Frozen messages. The tensor path stays one `memcpy`. |
+| E26 | Build a decoded list with `unsafe_write` into `unsafe_uninit_length` instead of `append`? | 100 messages, each with one short string: `append` after `reserve` best 76 ns, `unsafe_write` best 72 ns (`experiments/list_place.mojo`). | Not adopted. `append` after `reserve` is already at that floor. |
 
 ## How to reproduce
 
 ```bash
 taskset -c 2 pixi run mojo run -I src experiments/decode_small.mojo
+taskset -c 2 pixi run mojo run -I src experiments/mojo_speed.mojo
 taskset -c 2 pixi run mojo run -I src experiments/variants.mojo
 gcc -O3 -o /tmp/kiln_message experiments/E15-c-ceiling/kiln_message.c
 taskset -c 2 /tmp/kiln_message
 ```
 
-`experiments/decode_small.mojo` is the timing source for E21. It encodes one message, appends 100 copies, and encodes one batch struct whose only field is that list. `experiments/harness.mojo` is a longer script in one function. Its means move around when the file grows, so the table uses the smaller file.
+`experiments/decode_small.mojo` is the timing source for E21 and for the paired before/after of E22–E24. It encodes one message, appends 100 copies, and encodes one batch struct whose only field is that list. `experiments/mojo_speed.mojo` is the isolated string-constructor and word-store probe. `experiments/harness.mojo` is a longer script in one function. Its means move around when the file grows, so the table uses the smaller file.
+
+After E22–E24, one message encodes in mean 15 ns and decodes in mean 28 ns. The batch of 100 encodes in mean 339 ns and decodes in mean 1.56 µs with UTF-8 checking.

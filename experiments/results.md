@@ -37,4 +37,19 @@ c_encode_mean 2 total_ns 233226 len 44
 c_decode_mean 0 total_ns 7317
 ```
 
-The C decode total is a few microseconds for 100,000 calls, so the mean rounds to 0 ns. The C encode mean is about 2.3 ns. Mojo reflection encode of one message is mean 15 ns in `decode_small.mojo`. That is still more than 10% above the C loop, so E15 stays a failure. The batch encode is 3.5 ns per message.
+The C decode total is a few microseconds for 100,000 calls, so the mean rounds to 0 ns. The C encode mean is about 2.3 ns. Mojo reflection encode of one message is mean 15 ns in `decode_small.mojo` after E22. That is still more than 10% above the C loop, so E15 stays a failure. The batch encode is mean 339 ns, about 3.4 ns per message.
+
+A later paired run of the same file, after unaligned loads and stores, the uninitialized string fill, and the ASCII UTF-8 scan:
+
+```
+n1 ser 14 15 de 27 28 len 44
+n100_ser best 466 mean 478 len 4400
+owned100 best 1720 mean 1728
+owned100_utf8 best 1764 mean 1776
+batch_ser best 337 mean 339 len 4404
+batch_de_utf8 best 1394 mean 1558
+batch_de best 1411 mean 1426
+list_matches_batch True len 4404
+```
+
+`experiments/mojo_speed.mojo` on the same core, before those library changes, printed `string_from_span` mean 7168 ns and `string_uninit` mean 1126 ns for 200 escaped 5-byte strings. `word_roundtrip True` checked that `Pointer.unsafe_store` of a `UInt64` came back little-endian. The byte-store and word-store micro loops both hit a 14 ns best and are not used as the adopt/reject signal. The batch encode in `decode_small.mojo` is.
