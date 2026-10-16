@@ -14,4 +14,4 @@ The library is from-scratch Mojo. A Python reference codec writes the golden fil
 | Wire | Frozen profile, version 0 |
 | Mojo | 1.1.0 |
 
-On an Intel i7-12800H, powersave governor, one pinned core, Mojo 1.1.0, `experiments/decode_small.mojo` measured a 44-byte message at mean 15 ns to encode and mean 36 ns to decode into owned strings. A batch of 100 messages encodes in mean 345 ns and decodes in mean 3.09 µs when UTF-8 is checked. These are not dashboard ranks. The [experiments](experiments.md) page records the machine and the decisions.
+On an Intel i7-12800H, powersave governor, one pinned core, Mojo 1.1.0, `experiments/decode_small.mojo` measured a 44-byte message at mean 15 ns to encode and mean 28 ns to decode into owned strings. A batch of 100 messages encodes in mean 339 ns and decodes in mean 1.56 µs when UTF-8 is checked. These are not dashboard ranks. The [experiments](experiments.md) page records the machine and the decisions.
