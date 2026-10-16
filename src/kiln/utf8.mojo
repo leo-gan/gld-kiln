@@ -1,14 +1,26 @@
 from std.collections import Span
 from std.memory import unsafe_memcpy
+from std.sys import is_little_endian
 
 from kiln.error import KilnError
 
 
 @always_inline
 def _ascii_bits[o: ImmOrigin](p: Pointer[UInt8, o], n: Int) -> UInt8:
-    """OR of every byte. A result below 0x80 means the buffer is ASCII."""
-    var bits = UInt8(0)
+    """OR of every byte. A result below 0x80 means the buffer is ASCII.
+
+    Eight-byte loads are the pointer manual's unaligned `unsafe_load`.
+    A set high bit in the word returns 0x80 so the multi-byte checker runs.
+    """
     var i = 0
+    comptime if is_little_endian():
+        while i + 8 <= n:
+            var q = p.unsafe_offset(i).unsafe_bitcast[Scalar[DType.uint64]]()
+            var w = q.unsafe_load[alignment=1](0)
+            if (w & UInt64(0x8080808080808080)) != UInt64(0):
+                return UInt8(0x80)
+            i += 8
+    var bits = UInt8(0)
     while i < n:
         bits = bits | p[unsafe_offset=i]
         i += 1
