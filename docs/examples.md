@@ -1,5 +1,7 @@
 # Examples
 
+These programs follow the README example. A struct goes in, the field values come out in declaration order, and `decode` builds the struct again. The field names stay in the source.
+
 `examples/roundtrip.mojo` encodes a struct, decodes it, and checks the fields.
 
 A generated struct from `testdata/schema/point.json` has `x`, `y`, and an optional `label`. `tests/test_gen.mojo` builds one, calls `encode_to`, and reads it back with `decode_from`.
