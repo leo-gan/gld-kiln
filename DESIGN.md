@@ -7,7 +7,7 @@ Kiln is a positional little-endian codec. `reflect` walks a struct at compile ti
 | Topic | Choice |
 | --- | --- |
 | Wire | Kiln's own Frozen layout. Not speedy, bincode, comptime-bin, or dagr bytes. |
-| Profiles shipped | Frozen, and the `KLNT` tensor block. Evolve, a separate view layout, and columns stay out. See `docs/experiments.md`. |
+| Profiles shipped | Frozen, and the tensor directory (`tensors`, version 2). There is no earlier tensor layout. Evolve, a separate view layout, and columns stay out. See `docs/experiments.md`. |
 | API | `encode` / `decode` on Mojo structs, a `Value` tree driven by JSON Schema, and `gld-kilngen-mojo`. |
 | Lengths | `u32` byte counts. Dict keys are sorted. |
 | Errors | `KilnError`. A length past the buffer does not allocate. |

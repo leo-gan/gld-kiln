@@ -31,6 +31,8 @@ struct Writer(Movable):
     var length: Int
     var depth: Int
     var max_depth: Int
+    var max_bytes: Int
+    var max_count: Int
 
     def __init__(out self, capacity: Int = 256):
         var cap = capacity
@@ -40,6 +42,8 @@ struct Writer(Movable):
         self.length = 0
         self.depth = 0
         self.max_depth = MAX_DEPTH
+        self.max_bytes = MAX_BYTES
+        self.max_count = MAX_COUNT
 
     def reset(mut self):
         self.length = 0
@@ -178,14 +182,19 @@ struct Writer(Movable):
 struct Reader[origin: ImmOrigin](Movable):
     """A forward cursor over a borrowed Kiln buffer.
 
-    Lengths are rejected when they extend past the buffer, so a hostile
-    count cannot allocate. `check_utf8` applies to strings.
+    Lengths are rejected when they extend past the buffer. A count is
+    also rejected when the minimum encoding of that many elements does
+    not fit, and that rejection happens before the element storage is
+    allocated. `max_bytes` and `max_count` are the library caps. They
+    are not wire maxima. `check_utf8` applies to strings.
     """
 
     var data: Span[UInt8, Self.origin]
     var pos: Int
     var depth: Int
     var max_depth: Int
+    var max_bytes: Int
+    var max_count: Int
     var check_utf8: Bool
 
     def __init__(
@@ -193,11 +202,15 @@ struct Reader[origin: ImmOrigin](Movable):
         data: Span[UInt8, Self.origin],
         check_utf8: Bool = True,
         max_depth: Int = MAX_DEPTH,
+        max_bytes: Int = MAX_BYTES,
+        max_count: Int = MAX_COUNT,
     ):
         self.data = data
         self.pos = 0
         self.depth = 0
         self.max_depth = max_depth
+        self.max_bytes = max_bytes
+        self.max_count = max_count
         self.check_utf8 = check_utf8
 
     def remaining(self) -> Int:
@@ -363,12 +376,12 @@ struct Reader[origin: ImmOrigin](Movable):
 
     def count(mut self) raises KilnError -> Int:
         var n = Int(self.u32())
-        if n < 0 or n > MAX_COUNT:
+        if n < 0 or n > self.max_count:
             raise KilnError(KilnError.LIMIT, self.pos - 4)
         return n
 
     def take(mut self, n: Int) raises KilnError -> Span[UInt8, Self.origin]:
-        if n < 0 or n > MAX_BYTES:
+        if n < 0 or n > self.max_bytes:
             raise KilnError(KilnError.LIMIT, self.pos)
         if self.pos + n > len(self.data):
             raise KilnError(KilnError.EOF, self.pos)
@@ -379,7 +392,7 @@ struct Reader[origin: ImmOrigin](Movable):
     @always_inline
     def read_string(mut self) raises KilnError -> String:
         var n = Int(self.u32())
-        if n < 0 or n > MAX_BYTES:
+        if n < 0 or n > self.max_bytes:
             raise KilnError(KilnError.LIMIT, self.pos - 4)
         var start = self.pos
         if start + n > len(self.data):

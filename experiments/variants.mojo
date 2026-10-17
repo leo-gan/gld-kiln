@@ -89,17 +89,19 @@ def main() raises:
         sum_loop += d
         i += 1
     print("f64_loop_10k", "best", best_loop, "mean", sum_loop // 20, "len", wt.length)
-    from kiln.tensor import write_f64
+    from kiln.tensor import f64_directory
+    from kiln import encode
+    var bulk = f64_directory(xs)
     i = 0
     while i < 5:
-        write_f64(xs, wt)
+        encode(bulk, wt)
         i += 1
     var best_bulk = 1000000000
     var sum_bulk = 0
     i = 0
     while i < 20:
         var a = perf_counter_ns()
-        write_f64(xs, wt)
+        encode(bulk, wt)
         var b = perf_counter_ns()
         var d = Int(b - a)
         if d < best_bulk:
@@ -112,17 +114,18 @@ def main() raises:
     while k < 262144:
         big.append(0.0)
         k += 1
-    var wb = Writer(262144 * 8 + 128)
+    var grid = f64_directory(big)
+    var wb = Writer(262144 * 8 + 256)
     i = 0
     while i < 3:
-        write_f64(big, wb)
+        encode(grid, wb)
         i += 1
     var best_g = 1000000000
     var sum_g = 0
     i = 0
     while i < 10:
         var a = perf_counter_ns()
-        write_f64(big, wb)
+        encode(grid, wb)
         var b = perf_counter_ns()
         var d = Int(b - a)
         if d < best_g:

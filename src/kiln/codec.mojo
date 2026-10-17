@@ -51,6 +51,18 @@ trait KilnHash:
         ...
 
 
+trait KilnMin:
+    """Minimum encoded size of one value, in bytes.
+
+    List, Optional, Dict, and the tensor directory conform. A list
+    decoder uses this size before it allocates element storage.
+    """
+
+    @staticmethod
+    def kiln_min() -> Int:
+        ...
+
+
 trait KilnCodec:
     """Override the derived layout for one user type.
 
@@ -149,12 +161,75 @@ def type_hash[T: AnyType]() -> UInt64:
     return h
 
 
+def _mul_len(n: Int, m: Int, at: Int) raises KilnError -> Int:
+    """`n * m` as a byte length. Overflow is a limit error."""
+    if n < 0 or m < 0:
+        raise KilnError(KilnError.LIMIT, at)
+    if n == 0 or m == 0:
+        return 0
+    var un = UInt64(n)
+    var um = UInt64(m)
+    if un > (~UInt64(0)) // um:
+        raise KilnError(KilnError.LIMIT, at)
+    var prod = un * um
+    if prod > UInt64(0x7FFFFFFFFFFFFFFF):
+        raise KilnError(KilnError.LIMIT, at)
+    return Int(prod)
+
+
+def _guard_count[o: ImmOrigin](mut r: Reader[o], n: Int, m: Int) raises KilnError:
+    """Reject `n` elements before allocating them.
+
+    `m` is the minimum wire size of one element. A zero minimum skips
+    the byte check. The count cap already ran in `r.count`.
+    """
+    if m <= 0:
+        return
+    var need = _mul_len(n, m, r.pos)
+    if need > r.remaining():
+        raise KilnError(KilnError.EOF, r.pos)
+
+
+def _min_wire[T: AnyType]() -> Int:
+    """Smallest legal encoding of one value of type `T`."""
+    comptime if T == Bool or T == Int8 or T == UInt8:
+        return 1
+    elif T == Int16 or T == UInt16:
+        return 2
+    elif T == Int32 or T == UInt32 or T == Float32:
+        return 4
+    elif T == Int64 or T == UInt64 or T == Int or T == UInt or T == Float64:
+        return 8
+    elif T == String:
+        return 4
+    elif conforms_to(T, KilnMin):
+        comptime C = downcast[T, KilnMin]
+        return C.kiln_min()
+    elif conforms_to(T, KilnCodec):
+        return 1
+    elif reflect[T].is_struct():
+        comptime types = reflect[T].field_types()
+        comptime nfields = reflect[T].field_count()
+        var total = 0
+        comptime for idx in range(nfields):
+            comptime ft = types[idx]
+            total += _min_wire[ft]()
+        return total
+    else:
+        comptime assert False, "kiln: no minimum size for " + reflect[T].name()
+        return 0
+
+
 def _write_pod[T: _Pod](mut w: Writer, data: List[T], width: Int) raises KilnError:
+    comptime pod_w = _pod_arm[T]()
+    comptime if pod_w > 1:
+        comptime if not is_little_endian():
+            comptime assert False, "kiln: multi-byte numeric copy requires a little-endian host"
     var n = len(data)
-    if n > MAX_COUNT:
+    if n > w.max_count:
         raise KilnError(KilnError.LIMIT, w.length)
-    var nbytes = n * width
-    if nbytes > MAX_BYTES:
+    var nbytes = _mul_len(n, width, w.length)
+    if nbytes > w.max_bytes:
         raise KilnError(KilnError.LIMIT, w.length)
     w.put_u32(UInt32(n))
     if nbytes == 0:
@@ -168,10 +243,13 @@ def _write_pod[T: _Pod](mut w: Writer, data: List[T], width: Int) raises KilnErr
 
 
 def _read_pod[T: _Pod, o: ImmOrigin](mut r: Reader[o], width: Int) raises KilnError -> List[T]:
+    comptime pod_w = _pod_arm[T]()
+    comptime if pod_w > 1:
+        comptime if not is_little_endian():
+            comptime assert False, "kiln: multi-byte numeric copy requires a little-endian host"
     var n = r.count()
+    _guard_count(r, n, width)
     var nbytes = n * width
-    if nbytes > r.remaining():
-        raise KilnError(KilnError.EOF, r.pos)
     var out = List[T](unsafe_uninit_length=n)
     if nbytes > 0:
         unsafe_memcpy(
@@ -444,7 +522,7 @@ def _write[T: AnyType](mut w: Writer, value: T) raises KilnError:
     elif T == String:
         var sp = rebind[String](value).as_bytes()
         var n = len(sp)
-        if n > MAX_BYTES:
+        if n > w.max_bytes:
             raise KilnError(KilnError.LIMIT, w.length)
         w.put_u32(UInt32(n))
         w.put_span(sp)
@@ -468,7 +546,7 @@ def _write_struct[T: AnyType](mut w: Writer, value: T) raises KilnError:
     # cannot reserve past the bytes this value actually owns.
     comptime if _fields_poke[T]():
         var need = _size_struct[T](value)
-        if need > MAX_BYTES:
+        if need > w.max_bytes:
             raise KilnError(KilnError.LIMIT, w.length)
         w.ensure(need)
         var i = w.length
@@ -589,9 +667,15 @@ def encode_bytes[T: AnyType](value: T, max_depth: Int = MAX_DEPTH) raises KilnEr
 
 def decode[
     T: Defaultable & Movable & Deinitable, o: ImmOrigin
-](data: Span[UInt8, o], check_utf8: Bool = True, max_depth: Int = MAX_DEPTH) raises KilnError -> T:
+](
+    data: Span[UInt8, o],
+    check_utf8: Bool = True,
+    max_depth: Int = MAX_DEPTH,
+    max_bytes: Int = MAX_BYTES,
+    max_count: Int = MAX_COUNT,
+) raises KilnError -> T:
     """Decode one value. The buffer must hold that value and nothing after it."""
-    var r = Reader[o](data, check_utf8, max_depth)
+    var r = Reader[o](data, check_utf8, max_depth, max_bytes, max_count)
     var out = T()
     _fill[T](r, Pointer(to=out))
     if r.pos != len(data):
@@ -664,7 +748,7 @@ def _pod_arm[T: AnyType]() -> Int:
         return 0
 
 
-__extension List(KilnEmit, KilnRead, KilnHash):
+__extension List(KilnEmit, KilnRead, KilnHash, KilnMin):
     def kiln_size(self) -> Int:
         comptime width = _pod_arm[Self.T]()
         comptime if width > 0:
@@ -677,15 +761,23 @@ __extension List(KilnEmit, KilnRead, KilnHash):
                 i += 1
             return n
 
+    @staticmethod
+    def kiln_min() -> Int:
+        return 4
+
     def kiln_encode(self, mut w: Writer) raises KilnError:
+        comptime pod_w = _pod_arm[Self.T]()
+        comptime if pod_w > 1:
+            comptime if not is_little_endian():
+                comptime assert False, "kiln: multi-byte numeric list requires a little-endian host"
         w.enter()
         var width = _pod_arm[Self.T]()
         if width > 0:
             var n = len(self)
-            if n > MAX_COUNT:
+            if n > w.max_count:
                 raise KilnError(KilnError.LIMIT, w.length)
-            var nbytes = n * width
-            if nbytes > MAX_BYTES:
+            var nbytes = _mul_len(n, width, w.length)
+            if nbytes > w.max_bytes:
                 raise KilnError(KilnError.LIMIT, w.length)
             w.put_u32(UInt32(n))
             if nbytes > 0:
@@ -697,7 +789,7 @@ __extension List(KilnEmit, KilnRead, KilnHash):
                 )
         else:
             var n = len(self)
-            if n > MAX_COUNT:
+            if n > w.max_count:
                 raise KilnError(KilnError.LIMIT, w.length)
             w.put_u32(UInt32(n))
             var i = 0
@@ -711,13 +803,16 @@ __extension List(KilnEmit, KilnRead, KilnHash):
         o: ImmOrigin, po: MutOrigin
     ](mut r: Reader[o], ptr: Pointer[Self, po]) raises KilnError:
         r.enter()
+        comptime pod_w = _pod_arm[Self.T]()
+        comptime if pod_w > 1:
+            comptime if not is_little_endian():
+                comptime assert False, "kiln: multi-byte numeric list requires a little-endian host"
         var width = _pod_arm[Self.T]()
         if width > 0:
             comptime E = downcast[Self.T, Copyable & Deinitable]
             var n = r.count()
+            _guard_count(r, n, width)
             var nbytes = n * width
-            if nbytes > r.remaining():
-                raise KilnError(KilnError.EOF, r.pos)
             var out = List[E](unsafe_uninit_length=n)
             if nbytes > 0:
                 unsafe_memcpy(
@@ -730,6 +825,7 @@ __extension List(KilnEmit, KilnRead, KilnHash):
         else:
             comptime E = downcast[Self.T, _Init]
             var n = r.count()
+            _guard_count(r, n, _min_wire[Self.T]())
             var out = List[E]()
             if n > 0:
                 out.reserve(n)
@@ -749,7 +845,11 @@ __extension List(KilnEmit, KilnRead, KilnHash):
         _mix_lit(h, ">")
 
 
-__extension Optional(KilnEmit, KilnRead, KilnHash):
+__extension Optional(KilnEmit, KilnRead, KilnHash, KilnMin):
+    @staticmethod
+    def kiln_min() -> Int:
+        return 1
+
     def kiln_size(self) -> Int:
         if self:
             return 1 + encoded_size(self.value())
@@ -789,7 +889,11 @@ __extension Optional(KilnEmit, KilnRead, KilnHash):
         _mix_lit(h, ">")
 
 
-__extension Dict(KilnEmit, KilnRead, KilnHash):
+__extension Dict(KilnEmit, KilnRead, KilnHash, KilnMin):
+    @staticmethod
+    def kiln_min() -> Int:
+        return 4
+
     def kiln_size(self) -> Int:
         comptime if Self.K != String:
             comptime assert False, "Kiln Dict keys are String"
@@ -816,7 +920,7 @@ __extension Dict(KilnEmit, KilnRead, KilnHash):
                 vals.append(rebind[V](entry.value).copy())
                 idx.append(n)
                 n += 1
-            if n > MAX_COUNT:
+            if n > w.max_count:
                 raise KilnError(KilnError.LIMIT, w.length)
             _sort_idx(keys, idx)
             w.put_u32(UInt32(n))
