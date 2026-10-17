@@ -50,7 +50,7 @@ def main() raises:
 
 `encode_framed` writes the 16-byte `KLN0` header and one Frozen value. `decode_framed` checks the magic and the schema hash.
 
-`write_f64` writes a 64-byte `KLNT` header and a raw `Float64` payload. `read_f64` copies that payload back into a list.
+`TensorDir` is the tensor directory. `f64_directory` builds one unnamed `f64` tensor from a `List[Float64]`. `encode` and `decode` read and write that value with the same rules as any other struct field.
 
 ## JSON Schema
 

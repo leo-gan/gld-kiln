@@ -1,6 +1,6 @@
 from std.collections import List, Span
 
-from kiln.tensor import read_f64, write_f64
+from kiln import TensorDir, decode, encode, f64_directory
 from kiln.wire import Writer
 
 
@@ -13,12 +13,22 @@ def main() raises:
     data.append(1.5)
     data.append(-2.0)
     data.append(0.0)
-    var w = Writer(128)
-    write_f64(data, w)
-    if w.length != 64 + 24:
-        fail("len " + String(w.length))
-    var view = Span(w.buf)
-    var back = read_f64(view[0:w.length])
-    if len(back) != 3 or back[0] != 1.5 or back[1] != -2.0 or back[2] != 0.0:
-        fail("values")
+    var dir = f64_directory(data)
+    var w = Writer(256)
+    encode(dir, w)
+    var back = decode[TensorDir](Span(w.copy_bytes()))
+    if len(back.items) != 1 or back.items[0].shape[0] != 3:
+        fail("shape")
+    var raw = back.items[0].data.copy()
+    if len(raw) != 24:
+        fail("len " + String(len(raw)))
+    if raw[6] != 0xF8 or raw[7] != 0x3F:
+        fail("1.5")
+    if raw[15] != 0xC0:
+        fail("-2")
+    var i = 16
+    while i < 24:
+        if raw[i] != 0:
+            fail("zero")
+        i += 1
     print("tensor ok")
