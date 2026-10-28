@@ -82,5 +82,38 @@ nav:
   - Examples: examples.md
   - Techniques: techniques.md
   - Test data: test-data.md
-  - Spec: spec.md
+  - Spec:
+    - Contents: spec/index.md
+    - Introduction: spec/first.md
+    - Glossary: spec/glossary.md
+    - Terminology: spec/terminology.md
+    - Introduction:
+      - The same record in three encodings: spec/record.md
+      - Schema and declaration order: spec/schema.md
+      - Widths, lengths, and byte order: spec/widths.md
+      - Lists and a count that must fit: spec/lists.md
+      - A batch of records: spec/batch.md
+      - A numeric array: spec/array.md
+      - Names, scales, and foreign blocks: spec/directory-intro.md
+      - The frame: spec/frame-intro.md
+      - What this version leaves out: spec/omitted.md
+    - Rules:
+      - Frozen values: spec/frozen.md
+      - Lengths and allocation: spec/lengths.md
+      - Byte order: spec/byte-order.md
+      - Schema hash: spec/schema-hash.md
+      - Frame: spec/frame.md
+      - Tensor directory: spec/tensor-directory.md
+      - Check order: spec/check-order.md
+      - Dtypes: spec/dtypes.md
+      - Quantization: spec/quantization.md
+      - Opaque layouts: spec/opaque.md
+      - Canonical layout: spec/canonical.md
+      - Embedding: spec/embedding.md
+      - Errors: spec/errors.md
+      - Golden cases: spec/golden.md
+      - Dynamic values: spec/dynamic.md
+      - The trusted reader: spec/trusted.md
+      - Profiles: spec/profiles.md
+      - Changes from the previous draft: spec/changes.md
   - Experiments: experiments.md
