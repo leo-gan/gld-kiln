@@ -1,14 +1,14 @@
 # mojo-kiln
 
-Kiln is a positional little-endian serializer for [Mojo](https://mojolang.org/). The encoder and the decoder are generated from the fields of a Mojo struct when the program compiles. The bytes do not carry field names.
+A program can hold a small record as JSON text. One record is an id and a short label: `{"id": 7, "label": "cat"}`. The names `id` and `label` are written in that text, next to the values.
 
-The library is written in Mojo. It does not wrap a C, C++, or Rust serializer. `spec/reference/kiln_ref.py` is a slow reference codec used to produce golden files. It is not used at run time.
+Serialization is turning those values into a form that can be stored or sent, so another program can rebuild them. JSON text is one such form. Kiln is another form. It is a library for [Mojo](https://mojolang.org/), the programming language this project is written in.
 
-Mojo programs need to turn a struct into bytes: a message to another process, a record in a file, or a batch of samples. A format that writes a name or a tag before every value repeats work the compiler has already done, and it takes a branch on every field. The encoders that are fastest on a small fixed record skip that work. They write the fields in source order, as little-endian numbers, and they write a length before each string. Kiln is that encoding for Mojo. `reflect` walks the struct when the program compiles, so a new struct gets a codec without a second library and without a hand-written field list.
+Kiln is for the case where both programs are built from the same struct. A struct is the list of fields in the source code, in a fixed order. Kiln writes the values in that order. The names stay in the source. The other program reads the values back into those same fields.
 
-The split matters when both sides already share the struct. The names stay in the source. The wire holds the values. A small record is then a handful of stores plus the copy of its strings. A batch is that record repeated, so a per-field branch would be paid once per record. A large array of `Float64` is handled on its own: one header and a raw copy, because those numbers are not named fields.
+JSON still shows a new name when a field is added later. A Kiln reader built from a different struct stops, because the bytes hold values and no names to look up.
 
-Documentation: [leo-gan.github.io/gld-kiln](https://leo-gan.github.io/gld-kiln/).
+The next page is for a reader who already knows JSON and one or two other formats: [Introduction](https://leo-gan.github.io/gld-kiln/spec/first/). The full specification starts at [Kiln wire format, version 2](https://leo-gan.github.io/gld-kiln/spec/).
 
 ## Install
 
@@ -22,7 +22,7 @@ The import name is `kiln`. The generator command is `gld-kilngen-mojo`.
 
 ## Example
 
-`Point` has two `Int32` fields. Kiln writes them in that order: eight little-endian bytes, and no names. `decode` builds a new `Point` from those bytes. `Writer` keeps its buffer, so the next `encode` can reuse the allocation.
+`Point` has two whole-number fields. Kiln writes those two values and does not write the names. `decode` builds a new `Point` from those bytes. `Writer` keeps its buffer, so the next `encode` can reuse the allocation.
 
 ```mojo
 from std.collections import Span
@@ -48,7 +48,7 @@ def main() raises:
     print(back.x, back.y, len(raw))
 ```
 
-The program prints `9 -4 8`.
+The program prints `9 -4 8`. The `8` is the number of bytes for those two integers.
 
 ## License
 

@@ -10,4 +10,4 @@ The cost shows up in two places. One small record is a handful of stores plus th
 
 This version is for programs that share one struct definition. An optional frame stores a hash of the type and rejects the buffer when the struct no longer matches. Updating old files field by field would add a length and a skip to every value, which is the overhead the frozen layout is there to remove. When a JSON Schema file is the source of the types, `gld-kilngen-mojo` reads a documented subset and writes the Mojo structs. The bytes stay positional.
 
-A separate wire profile is shipped only when an experiment meets the bar written down for it. Frozen is the default. The tensor directory is the other shipped layout.
+A separate wire profile is shipped only when an experiment meets the bar written down for it. Frozen is the default. The tensor directory is the other shipped layout. The byte rules are the [Kiln specification](spec/index.md).

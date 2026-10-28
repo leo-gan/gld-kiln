@@ -1,8 +1,8 @@
 # Kiln
 
-Kiln encodes a Mojo struct as little-endian fields in declaration order. The compiled program already knows the type, so the bytes do not contain field names or field numbers.
+Kiln stores the values of a Mojo struct so another program, built from that same struct, can rebuild them. Storing values so they can be sent or saved is called serialization. JSON does this by writing the names and the values as text.
 
-The library exists for the exchange where both sides already share that struct: a message, a file record, or a batch of samples. Writing a name before each value spends bytes and a branch to repeat what the compiler knows. Kiln keeps the names in the Mojo source and writes only the values. [Why Kiln](why-kiln.md) explains the batch case, the tensor directory for numeric arrays, and the decision to reject a changed struct instead of evolving the file in place.
+A reader who knows JSON, and has only heard that word, should start with the [repository README](https://github.com/leo-gan/gld-kiln#readme). The specification opens with [Introduction](spec/first.md), then the [contents](spec/index.md).
 
 The library is from-scratch Mojo. A Python reference codec writes the golden files. It is not linked into the encoder.
 
