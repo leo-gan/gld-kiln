@@ -1,18 +1,35 @@
-# mojo-kiln
+# Kiln — a frozen, positional wire format in 11 languages
 
-A program can hold a small record as JSON text. One record is an id and a short label: `{"id": 7, "label": "cat"}`. The names `id` and `label` are written in that text, next to the values.
+Kiln is a little-endian wire format with from-scratch implementations in 11
+languages, golden-file tested against one spec. No field names on the wire:
+both sides are built from the same struct, so Kiln writes values in field
+order and nothing else. A 44-byte message encodes in ~15 ns and decodes in
+~28 ns (Mojo, measured, machine documented).
 
-Serialization is turning those values into a form that can be stored or sent, so another program can rebuild them. JSON text is one such form. Kiln is another form. It is a library for [Mojo](https://mojolang.org/), the programming language this project is written in.
+**Spec + docs:** https://leo-gan.github.io/gld-kiln
+**Implementations:** Mojo (this repo) · Go · Rust · Zig · C · C++ · Python ·
+Java · Swift · C# · TypeScript — each an independent from-scratch codec.
 
-Kiln is for the case where both programs are built from the same struct. A struct is the list of fields in the source code, in a fixed order. Kiln writes the values in that order. The names stay in the source. The other program reads the values back into those same fields.
+## Why positional?
 
-JSON still shows a new name when a field is added later. A Kiln reader built from a different struct stops, because the bytes hold values and no names to look up.
+JSON writes the names next to the values: `{"id": 7, "label": "cat"}`.
+Kiln writes only the values, in the order the struct declares them. The names
+stay in the source code. The price: a reader built from a different struct
+stops instead of guessing — there are no names on the wire to look up.
 
-The next page is for a reader who already knows JSON and one or two other formats: [Introduction](https://leo-gan.github.io/gld-kiln/spec/first/). The full specification starts at [Kiln wire format, version 2](https://leo-gan.github.io/gld-kiln/spec/).
+## Benchmarks (Mojo, measured)
+
+| Message | Encoded size | Encode | Decode |
+| --- | ---: | ---: | ---: |
+| 44-byte message | 44 bytes | ~15 ns | ~28 ns |
+
+Full numbers and methodology: https://leo-gan.github.io/gld-kiln (machine
+documented with every run).
 
 ## Install
 
-The published package is `mojo-kiln` for linux-64, on [prefix.dev/leo-gan/leo-gan](https://prefix.dev/leo-gan/leo-gan).
+The published package is `mojo-kiln` for linux-64, on
+[prefix.dev/leo-gan/leo-gan](https://prefix.dev/leo-gan/leo-gan).
 
 ```bash
 pixi add --channel https://prefix.dev/leo-gan/leo-gan mojo-kiln
@@ -22,7 +39,9 @@ The import name is `kiln`. The generator command is `gld-kilngen-mojo`.
 
 ## Example
 
-`Point` has two whole-number fields. Kiln writes those two values and does not write the names. `decode` builds a new `Point` from those bytes. `Writer` keeps its buffer, so the next `encode` can reuse the allocation.
+`Point` has two whole-number fields. Kiln writes those two values and does
+not write the names. `decode` builds a new `Point` from those bytes. `Writer`
+keeps its buffer, so the next `encode` can reuse the allocation.
 
 ```mojo
 from std.collections import Span
@@ -48,8 +67,21 @@ def main() raises:
     print(back.x, back.y, len(raw))
 ```
 
-The program prints `9 -4 8`. The `8` is the number of bytes for those two integers.
+The program prints `9 -4 8`. The `8` is the number of bytes for those two
+integers.
+
+## Learn more
+
+- Introduction for readers who know JSON and one or two other formats:
+  https://leo-gan.github.io/gld-kiln/spec/first/
+- Full specification (wire format, version 2):
+  https://leo-gan.github.io/gld-kiln/spec/
 
 ## License
 
 MIT. Copyright (c) 2026 Leonid Ganeline.
+
+---
+
+*If Kiln is useful to you, a star on this repo (and any language codec you
+use) is the fastest way to help it grow.*
