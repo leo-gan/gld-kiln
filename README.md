@@ -1,5 +1,7 @@
 # Kiln — a frozen, positional wire format in 11 languages
 
+[Serialization](https://leo-gan.github.io/serialization/) is the hub for the theory, the history, and the benchmarks.
+
 Kiln is a little-endian wire format with from-scratch implementations in 11
 languages, golden-file tested against one spec. No field names on the wire:
 both sides are built from the same struct, so Kiln writes values in field
