@@ -1,5 +1,5 @@
-site_name: mojo-kiln
-site_description: Positional little-endian serializer for Mojo
+site_name: Kiln
+site_description: Positional little-endian wire format and tensor directory specification (with the Mojo reference implementation)
 site_author: Leonid Ganeline
 site_url: https://leo-gan.github.io/gld-kiln/
 repo_url: https://github.com/leo-gan/gld-kiln
@@ -53,6 +53,7 @@ plugins:
 
 markdown_extensions:
   - attr_list
+  - footnotes
   - md_in_html
   - admonition
   - tables
@@ -61,7 +62,9 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
@@ -71,49 +74,17 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
+      toc_depth: 3
 
 exclude_docs: |
   internal/**
 
 nav:
   - Home: index.md
-  - Why Kiln: why-kiln.md
-  - Instructions: instructions.md
-  - Examples: examples.md
-  - Techniques: techniques.md
-  - Test data: test-data.md
-  - Spec:
-    - Contents: spec/index.md
-    - Introduction: spec/first.md
-    - Glossary: spec/glossary.md
-    - Terminology: spec/terminology.md
-    - Introduction:
-      - The same record in three encodings: spec/record.md
-      - Schema and declaration order: spec/schema.md
-      - Widths, lengths, and byte order: spec/widths.md
-      - Lists and a count that must fit: spec/lists.md
-      - A batch of records: spec/batch.md
-      - A numeric array: spec/array.md
-      - Names, scales, and foreign blocks: spec/directory-intro.md
-      - The frame: spec/frame-intro.md
-      - What this version leaves out: spec/omitted.md
-    - Rules:
-      - Frozen values: spec/frozen.md
-      - Lengths and allocation: spec/lengths.md
-      - Byte order: spec/byte-order.md
-      - Schema hash: spec/schema-hash.md
-      - Frame: spec/frame.md
-      - Tensor directory: spec/tensor-directory.md
-      - Check order: spec/check-order.md
-      - Dtypes: spec/dtypes.md
-      - Quantization: spec/quantization.md
-      - Opaque layouts: spec/opaque.md
-      - Canonical layout: spec/canonical.md
-      - Embedding: spec/embedding.md
-      - Errors: spec/errors.md
-      - Golden cases: spec/golden.md
-      - Dynamic values: spec/dynamic.md
-      - The trusted reader: spec/trusted.md
-      - Profiles: spec/profiles.md
-      - Changes from the previous draft: spec/changes.md
+  - Overview & Comparison: comparison.md
+  - Wire Specification (v2): spec/index.md
+  - Mojo Implementation:
+    - Quickstart & Examples: mojo/quickstart.md
+    - API Reference: mojo/api.md
+    - Implementation & Verification: mojo/internals.md
   - Experiments: experiments.md

@@ -678,18 +678,18 @@ def check_list(buf: bytes, elem: tuple, cap: int = CAP) -> str | None:
     return None
 
 
-# Heading anchors after the specification was split into docs/spec/.
-# A missing section fails generation rather than writing a stale /spec/# link.
+# Heading anchors in the single-document specification (spec/kiln-wire-v2.md, published at /spec/).
+# A missing section fails generation rather than writing a stale link.
 _SECTION_URL = {
-    "Tensor directory": "https://leo-gan.github.io/gld-kiln/spec/tensor-directory/#tensor-directory",
-    "Dtypes": "https://leo-gan.github.io/gld-kiln/spec/dtypes/#dtypes",
-    "Quantization": "https://leo-gan.github.io/gld-kiln/spec/quantization/#quantization",
-    "Opaque layouts": "https://leo-gan.github.io/gld-kiln/spec/opaque/#opaque-layouts",
-    "Embedding": "https://leo-gan.github.io/gld-kiln/spec/embedding/#embedding",
-    "Schema hash": "https://leo-gan.github.io/gld-kiln/spec/schema-hash/#schema-hash",
-    "Lengths and allocation": "https://leo-gan.github.io/gld-kiln/spec/lengths/#lengths-and-allocation",
-    "Byte order": "https://leo-gan.github.io/gld-kiln/spec/byte-order/#byte-order",
-    "Canonical layout": "https://leo-gan.github.io/gld-kiln/spec/canonical/#canonical-layout",
+    "Tensor directory": "https://leo-gan.github.io/gld-kiln/spec/#tensor-directory",
+    "Dtypes": "https://leo-gan.github.io/gld-kiln/spec/#dtypes",
+    "Quantization": "https://leo-gan.github.io/gld-kiln/spec/#quantization",
+    "Opaque layouts": "https://leo-gan.github.io/gld-kiln/spec/#opaque-layouts",
+    "Embedding": "https://leo-gan.github.io/gld-kiln/spec/#embedding",
+    "Schema hash": "https://leo-gan.github.io/gld-kiln/spec/#schema-hash",
+    "Lengths and allocation": "https://leo-gan.github.io/gld-kiln/spec/#lengths-and-allocation",
+    "Byte order": "https://leo-gan.github.io/gld-kiln/spec/#byte-order",
+    "Canonical layout": "https://leo-gan.github.io/gld-kiln/spec/#canonical-layout",
 }
 
 
@@ -1450,16 +1450,14 @@ def main() -> None:
     out = Path(__file__).resolve().parents[1] / "kiln-v2-cases.json"
     document = {
         "format": "kiln",
-        "standard": "Kiln wire v2 (draft)",
-        "version": "v2-draft",
+        "standard": "Kiln Wire Format, Version 2",
+        "version": "2",
         "standard_url": "https://leo-gan.github.io/gld-kiln/spec/",
         "provenance": "original-work",
         "notes": (
-            "Cases for Kiln wire version 2. Produced by "
-            "spec/reference/gen_v2_cases.py. The prose is the book in docs/spec/. "
-            "Version-1 cases are included where version 2 keeps them. "
-            "The reference cap is 16777216. This file is not wired into "
-            "the compliance runner."
+            "Conformance vectors for Kiln Wire Format Version 2, generated and "
+            "verified by spec/reference/gen_v2_cases.py against spec/kiln-wire-v2.md. "
+            "The reference cap is 16777216."
         ),
         "cap": CAP,
         "cases": cases,

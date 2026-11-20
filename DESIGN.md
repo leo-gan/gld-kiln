@@ -1,22 +1,18 @@
-# Kiln design
+# Kiln Design Summary
 
-Kiln is a positional little-endian codec. `reflect` walks a struct at compile time. The caller owns a `Writer` and reuses it. `decode` is checked. `Reader.*_fast` is the unchecked reader for a buffer this process already bounded.
+Kiln is a deterministic, positional, little-endian wire format with an embedded 64-byte-aligned tensor directory (`KLNT` v2). In the Mojo reference implementation (`mojo-kiln`), `reflect[T]` monomorphizes struct codecs at compile time, callers reuse a `Writer` buffer, `decode` enforces pre-allocation bounds and UTF-8 checks, and `Reader.*_fast` exposes an explicit unsafe fast path for caller-guaranteed buffers.
 
-## Decisions
+## Architectural Decisions
 
-| Topic | Choice |
+| Topic | Decision |
 | --- | --- |
-| Wire | Kiln's own Frozen layout. Not speedy, bincode, comptime-bin, or dagr bytes. |
-| Profiles shipped | Frozen, and the tensor directory (`tensors`, version 2). There is no earlier tensor layout. Evolve, a separate view layout, and columns stay out. See `docs/experiments.md`. |
-| API | `encode` / `decode` on Mojo structs, a `Value` tree driven by JSON Schema, and `gld-kilngen-mojo`. |
-| Lengths | `u32` byte counts. Dict keys are sorted. |
-| Errors | `KilnError`. A length past the buffer does not allocate. |
-| Package | `mojo-kiln`, import `kiln`, Mojo 1.1.0, MIT, linux-64. |
+| **Wire format** | Kiln Version 2 normative standard ([`spec/kiln-wire-v2.md`](spec/kiln-wire-v2.md)): Frozen profile (`0`) + embedded `KLNT` v2 tensor directory (`tensors`). |
+| **Excluded profiles** | Schema-evolution tags (`1`), separate offset-view wire layout (`2`), and columnar tables (`4`) remain unshipped in Version 2. See [`docs/experiments.md`](docs/experiments.md) and [`docs/comparison.md`](docs/comparison.md). |
+| **Mojo API surface** | Compile-time `encode` / `decode` / `encode_framed` / `decode_framed`, `TensorDir` / `KilnTensor`, runtime `schema_from_json` + `Value`, and `gld-kilngen-mojo`. |
+| **Counts & ordering** | `u32` LE counts (`u64` for tensor payload lengths), pre-allocation minimum-size guard, lexicographically sorted UTF-8 dict keys, canonical 64-byte-aligned tensor placement. |
+| **Errors** | `KilnError` (`FRAME`, `SCHEMA`, `LIMIT`, `EOF`, `TYPE`, `UTF8`, `TRAILING`, `DEPTH`, plus host dynamic `RANGE`). |
+| **Package** | `mojo-kiln` `0.3.0`, import `kiln`, Mojo `1.1.0`, MIT, `linux-64`. |
 
-## Pull requests
+## GLD Benchmark Integration
 
-The first push is the library, tests, experiments, and docs at version 0.1.0. After `main` is protected, the version bump to 0.2.0 is its own pull request and is what publishes the conda package.
-
-## Benchmark row
-
-`seriailizer-benchmark` vendors `src/kiln` and times `kiln` on the five suite record types. `Fixture.empty` avoids copying five lists during deserialize for Kiln and for the CBOR, Avro, EmberJson, and BSON rows that used that copy.
+`GLD.SerializerBenchmark` vendors `src/kiln` and evaluates `kiln` across the suite workloads. `Fixture.empty` avoids copying five suite lists during deserialize for Kiln alongside the CBOR, Avro, EmberJson, and BSON rows that shared that copy.
