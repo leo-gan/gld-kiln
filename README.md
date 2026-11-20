@@ -74,10 +74,12 @@ integers.
 
 ## Learn more
 
-- Introduction for readers who know JSON and one or two other formats:
-  https://leo-gan.github.io/gld-kiln/spec/first/
-- Full specification (wire format, version 2):
+- Overview and comparison with JSON, Protobuf, FlatBuffers, Safetensors, GGUF, and Arrow:
+  https://leo-gan.github.io/gld-kiln/comparison/
+- Normative specification (Kiln Wire Format, Version 2):
   https://leo-gan.github.io/gld-kiln/spec/
+- Mojo API reference and empirical evaluation:
+  https://leo-gan.github.io/gld-kiln/mojo/api/ · https://leo-gan.github.io/gld-kiln/experiments/
 
 ## License
 
